@@ -1,0 +1,552 @@
+local json = require ("json")
+
+local io = GLOBAL.io
+local TheWorld = GLOBAL.TheWorld
+local lastTime = GLOBAL.os.time()
+local server_num = GetModConfigData("server_num")
+local death_annonce = GetModConfigData("death_annonce")
+local language = GetModConfigData("language")
+local output, input
+
+if GetModConfigData("server_num") == 1 then
+	output = "out.json"
+	input = "in.json"
+else
+	output = "out"..server_num..".json"
+	input = "in"..server_num..".json"
+end
+
+if language == "vi" then 
+
+	s_announce = "[Thông Báo]"
+	s_death = "[Chết]"
+	s_join_game = "[Tham Gia]"
+	s_leave_game = "[Rời Đi]"
+	s_resurrect = "[Hồi Sinh]"
+	s_kicked_from_game = "[Kick]"
+	s_banned_from_game = "[Ban]"
+	s_item_drop = "[Kill]"
+	s_vote = "[Vote]"
+	s_dice_roll = "[Random]"
+	s_mod = "[MOD Update]"
+	s_skin = "[Gift]"
+	s_received = " đã nhận được "
+	s_whisper = "[Thì Thầm]"
+	-----------------------------------------
+	KILLS = "đã giết"
+	REMAIN = "còn lại"
+
+else 
+
+	s_announce = "[Announce]"
+	s_death = "[Death]"
+	s_join_game = "[Join Game]"
+	s_leave_game = "[Leave Game]"
+	s_resurrect = "[Resurrect]"
+	s_kicked_from_game = "[Kick]"
+	s_banned_from_game = "[Ban]"
+	s_item_drop = "[Kill]"
+	s_vote = "[Vote]"
+	s_dice_roll = "[Random]"
+	s_mod = "[MOD Update]"
+	s_skin = "[Gift]"
+	s_received = " received "
+	s_whisper = "[Whisper]"
+	-----------------------------------------
+	KILLS = "killed"
+	REMAIN = "remaining"
+
+end
+
+
+
+GLOBAL.SendToDiscord = function(_title,_character,_name,_message,_skin_name)
+	local character_icons = {
+		unknown = "https://cdn.discordapp.com/attachments/242336026251493376/735280247464788028/avatar_unknown.png",
+		charlie = "https://media.discordapp.net/attachments/381234050632908801/735364619551637646/avatar_charlie.png",
+		wagstaff = "https://cdn.discordapp.com/attachments/735356544174260255/735358342112870430/avatar_wagstaff.png",
+		walani = "https://cdn.discordapp.com/attachments/242336026251493376/735280248593186927/avatar_walani.png",
+		walter = "https://cdn.discordapp.com/attachments/242336026251493376/735280250539343902/avatar_walter.png",
+		warly = "https://cdn.discordapp.com/attachments/242336026251493376/735280252397289552/avatar_warly.png",
+		waxwell = "https://cdn.discordapp.com/attachments/242336026251493376/735280253974478858/avatar_waxwell.png",
+		wearger = "https://cdn.discordapp.com/attachments/242336026251493376/735280255673172018/avatar_wearger.png",
+		webber = "https://cdn.discordapp.com/attachments/242336026251493376/735280257107755078/avatar_webber.png",
+		weerclops = "https://cdn.discordapp.com/attachments/242336026251493376/735280258617573386/avatar_weerclops.png",
+		wendy = "https://cdn.discordapp.com/attachments/242336026251493376/735280259863281775/avatar_wendy.png",
+		wes = "https://cdn.discordapp.com/attachments/242336026251493376/735280260903469166/avatar_wes.png",
+		wheeler = "https://cdn.discordapp.com/attachments/735356544174260255/735358338656763965/avatar_wheeler.png",
+		wickerbottom = "https://cdn.discordapp.com/attachments/242336026251493376/735280261994119218/avatar_wickerbottom.png",
+		wathgrithr = "https://cdn.discordapp.com/attachments/242336026251493376/735280263139033108/avatar_wigfrid.png",
+		wilba = "https://cdn.discordapp.com/attachments/735356544174260255/735358331748745266/avatar_wilba.png",
+		wilbur = "https://cdn.discordapp.com/attachments/242336026251493376/735280264405843988/avatar_wilbur.png",
+		willow = "https://cdn.discordapp.com/attachments/242336026251493376/735280365790429194/avatar_willow.png",
+		wilson = "https://cdn.discordapp.com/attachments/242336026251493376/735280368583966810/avatar_wilson.png",
+		winona = "https://cdn.discordapp.com/attachments/242336026251493376/735280371343556678/avatar_winona.png",
+		wolfgang = "https://cdn.discordapp.com/attachments/242336026251493376/735280374325837974/avatar_wolfgang.png",
+		wonkey = "https://cdn.discordapp.com/attachments/992412483346247761/992412659897086022/avatar_wonkey.png",
+		woodie = "https://cdn.discordapp.com/attachments/242336026251493376/735280376796282981/avatar_woodie.png",
+		woodlegs = "https://cdn.discordapp.com/attachments/242336026251493376/735280379270922310/avatar_woodlegs.png",
+		woose = "https://cdn.discordapp.com/attachments/242336026251493376/735280382332633179/avatar_woose.png",
+		wormot = "https://media.discordapp.net/attachments/381234050632908801/735363977118482442/avatar_wormot.png",
+		wormwood = "https://cdn.discordapp.com/attachments/242336026251493376/735280384891289721/avatar_wormwood.png",
+		wortox = "https://cdn.discordapp.com/attachments/242336026251493376/735280387378380890/avatar_wortox.png",
+		wanda = "https://cdn.discordapp.com/attachments/992412483346247761/992412590179369070/avatar_wanda.png",
+		wragonfly = "https://cdn.discordapp.com/attachments/242336026251493376/735280392768323654/avatar_wragonfly.png",
+		wurt = "https://cdn.discordapp.com/attachments/242336026251493376/735280434950176778/avatar_wurt.png",
+		wx78 = "https://cdn.discordapp.com/attachments/242336026251493376/735280438947610754/avatar_wx78.png",
+		madameweb = "https://cdn.discordapp.com/attachments/845319327028740156/920653512122171412/madameweb.png",
+		monkey_king = "https://cdn.discordapp.com/attachments/845319327028740156/864215262398906378/monkey_king.png",
+		myth_yutu = "https://cdn.discordapp.com/attachments/845319327028740156/864215264810762280/myth_yutu.png",
+		neza = "https://cdn.discordapp.com/attachments/845319327028740156/864215267654500362/neza.png",
+		pigsy = "https://cdn.discordapp.com/attachments/845319327028740156/864215269870403584/pigsy.png",
+		white_bone = "https://cdn.discordapp.com/attachments/845319327028740156/864215272772599880/white_bone.png",
+		yama_commissioners = "https://cdn.discordapp.com/attachments/845319327028740156/890088658936406016/yama_commissioners.png",
+		yangjian = "https://cdn.discordapp.com/attachments/845319327028740156/864215275317624872/yangjian.png",
+		wharang = "https://cdn.discordapp.com/attachments/845319327028740156/875661443339546644/wharang.png",
+		yuanzi = "https://cdn.discordapp.com/attachments/845319327028740156/875661445717717012/yuanzi.png",
+		puppet = "https://cdn.discordapp.com/attachments/845319327028740156/877874891364401182/puppet.png",
+		calliope_mori = "https://cdn.discordapp.com/attachments/845319327028740156/878919681845653575/calliope_mori.png",
+		kiara = "https://cdn.discordapp.com/attachments/845319327028740156/878919705056915476/kiara.png",
+		gura = "https://cdn.discordapp.com/attachments/845319327028740156/875661440588087306/gura.png",
+		ninomae = "https://cdn.discordapp.com/attachments/845319327028740156/878919734052139019/ninomae.png",
+		amelia = "https://cdn.discordapp.com/attachments/845319327028740156/878919755506024468/amelia.png",
+		suisei = "https://cdn.discordapp.com/attachments/845319327028740156/878919786275426314/suisei.png",
+		mikochi = "https://cdn.discordapp.com/attachments/845319327028740156/878919809386033202/mikochi.png",
+		kaichou = "https://cdn.discordapp.com/attachments/845319327028740156/878919829606768640/kaichou.png",
+		watame = "https://cdn.discordapp.com/attachments/845319327028740156/878919864734076969/watame.png",
+		matsuri = "https://cdn.discordapp.com/attachments/845319327028740156/878919893607657472/matsuri.png",
+		sora = "https://cdn.discordapp.com/attachments/845319327028740156/885829753221808168/sora.png",
+		irys_hope = "https://cdn.discordapp.com/attachments/845319327028740156/890087582254379038/irys_hope.png",
+		seele = "https://cdn.discordapp.com/attachments/845319327028740156/890087585215569990/seele.png",
+		taizhen = "https://cdn.discordapp.com/attachments/845319327028740156/890087586633224242/taizhen.png",
+		totooria = "https://cdn.discordapp.com/attachments/845319327028740156/890087588415811645/totooria.png",
+		amiya = "https://cdn.discordapp.com/attachments/845319327028740156/892412475776073738/amiya.png",
+		satori = "https://cdn.discordapp.com/attachments/845319327028740156/892953781011107840/satori.png",
+		broccoli = "https://cdn.discordapp.com/attachments/845319327028740156/941763339162378301/broccoli.png"
+	}
+	local dir = output
+	local file = io.open(dir, 'w')
+	if file == nil then
+		print('ERROR! ',err)
+	else 
+		local encoded = json.encode({
+			title = _title,
+			character = character_icons[_character] or character_icons.unknown,
+			name = _name,
+			message = _message,
+			skin_name = _skin_name,
+		})
+		file:write(encoded)
+		file:close()
+	end
+end
+ 
+local function starts_with(str, start)
+   return str:sub(1, #start) == start
+end
+
+local oldUpdate = GLOBAL.Update
+GLOBAL.Update = function(x)  
+	if(GLOBAL.TheShard:IsMaster() or not GLOBAL.TheNet:GetServerIsDedicated()) then
+		local dir = input
+		local file = io.open(dir, 'r')
+		if file == nil then
+			print('ERROR! ',err)
+		else
+			fileCont = file:read("*l")
+			if(fileCont ~= nil) then
+				filed = json.decode(fileCont)
+				if filed.time ~= nil then
+					local thisTime
+					if(GLOBAL.TheNet:GetServerIsDedicated()) then --for some reason, dedicated servers are better at counting.
+						thisTime = math.floor(GLOBAL.tonumber(string.match(filed.time, "%d+"))/1000)
+					else
+						thisTime = math.floor(GLOBAL.tonumber(string.match(filed.time, "%d+")))
+					end
+					if thisTime > lastTime then
+						local fileContent = filed.message
+						if(fileContent ~= nil) then
+							if(starts_with(fileContent,"/")) then
+								local str = fileContent:sub(2)
+								GLOBAL.ExecuteConsoleCommand(str) --uncomment this to allow ANYONE WHO SENDS A MESSAGE THAT STARTS WITH A / TO SEND ANY CUSTOM LUA THEY WANT, SET THIS UP INCREDIBLY CAREFULLY, DO NOT GIVE THIS ABILITY TO ANYONE BUT YOUR MOST TRUSTED.
+							else
+								GLOBAL.TheNet:SystemMessage("[Discord] " .. tostring(filed.name) .. ": " ..  tostring(fileContent))
+							end
+						end
+						lastTime = thisTime
+						end
+					end
+				else
+					--print("there is an updated version of the synced discord mod, go redownload the bot from the github page")
+				end
+			file:close()
+		end	
+	end
+	oldUpdate(x)
+end
+
+local oldNetworking_Say = GLOBAL.Networking_Say
+GLOBAL.Networking_Say = function(guid, userid, name, prefab, message, colour, whisper, isemote, user_vanity)
+	_message = string.gsub(message,"'","’")
+	_name = string.gsub(name,"'","’")
+	if(whisper == false) then
+		GLOBAL.SendToDiscord("chat",prefab,_name,_message,nil)
+	else
+		GLOBAL.SendToDiscord("chat",prefab,s_whisper.." - ".._name,_message,nil) 
+	end
+	oldNetworking_Say(guid, userid, name, prefab, message, colour, whisper, isemote, user_vanity)
+end
+
+
+
+local oldNetworking_Announcement = GLOBAL.Networking_Announcement
+GLOBAL.Networking_Announcement = function(message, colour, announce_type)
+	if announce_type == "default" then
+		GLOBAL.SendToDiscord("announce","announce",s_announce,message,nil)
+	elseif announce_type == "death" then
+		GLOBAL.SendToDiscord("death","announce",s_death,message,nil)
+	elseif(announce_type == "join_game") then
+		GLOBAL.SendToDiscord("join_game","announce",s_join_game,message,nil)
+	elseif(announce_type == "leave_game") then
+		GLOBAL.SendToDiscord("leave_game","announce",s_leave_game,message,nil)
+	elseif(announce_type == "resurrect") then
+		GLOBAL.SendToDiscord("resurrect","announce",s_resurrect,message,nil)
+	elseif(announce_type == "kicked_from_game") then
+		GLOBAL.SendToDiscord("kicked_from_game","announce",s_kicked_from_game,message,nil)
+	elseif(announce_type == "banned_from_game") then
+		GLOBAL.SendToDiscord("banned_from_game","announce",s_banned_from_game,message,nil)
+	elseif(announce_type == "item_drop") then
+		GLOBAL.SendToDiscord("item_drop","announce",s_item_drop,message,nil)
+	elseif(announce_type == "vote") then
+		GLOBAL.SendToDiscord("vote","announce",s_vote,message,nil)
+	elseif(announce_type == "dice_roll") then
+		GLOBAL.SendToDiscord("dice_roll","announce",s_dice_roll,message,nil)
+	elseif(announce_type == "mod") then
+		GLOBAL.SendToDiscord("mod","announce",s_mod,message,nil)
+	else
+		GLOBAL.SendToDiscord("announce","announce",s_announce,message,nil)
+	end
+	oldNetworking_Announcement(message, colour, announce_type)
+end
+
+local oldNetworking_SkinAnnouncement = GLOBAL.Networking_SkinAnnouncement
+GLOBAL.Networking_SkinAnnouncement = function(user_name, user_colour, skin_name)
+	GLOBAL.SendToDiscord("skin","announce",s_skin,user_name .. s_received .. string.upper(skin_name),string.upper(skin_name))
+	oldNetworking_SkinAnnouncement(user_name, user_colour, skin_name)
+end
+
+--[[
+local oldNetworking_SystemMessage = GLOBAL.Networking_SystemMessage
+GLOBAL.Networking_SystemMessage = function(message)
+	GLOBAL.SendToDiscord("announce","announce","[System]",message,nil)
+    oldNetworking_SystemMessage(message)
+end
+--]]
+
+
+---death_annonce------------------------------------------------------------
+
+local translation = {
+	alterguardian_phase1 = {'Chiến Binh Thiên Hà - Cấp 1'},
+	alterguardian_phase2 = {'Chiến Binh Thiên Hà - Cấp 2'},
+	alterguardian_phase3 = {'Chiến Binh Thiên Hà - Cấp 3'},
+	antlion = {'Kiến Sư Tử'},
+	babybeefalo = {'Bò Lai Sơ Sinh'},
+	bearger = {'Gấu Lửng'}, 
+	beefalo = {'Bò Lai'},
+	beequeen = {'Ong Chúa'}, 
+	claywarg = {'Chó Săn Đất Sét'},
+	crabking = {'Cua Hoàng Đế'}, 
+	deciduoustree = {'Cây phong'}, 
+	gingerbreadwarg = {'Chó Sói Bánh Gừng'},
+	koalefant_summer = {'Voi'}, 
+	koalefant_winter = {'Voi Mùa Đông'}, 
+	leif = {'Thần Rừng'}, 
+	leif_sparse = {'Thần Rừng'}, 
+	lightninggoat = {'Dê Điện'},
+	lordfruitfly = {'Ruồi Chúa Ăn Trái'}, 
+	minotaur = {'Quản Thần Cổ Đại'},
+	moose = {'Ngỗng'}, 
+	shadow_knight = {'Quân Mã Ảo Ảnh'}, 
+	shadow_bishop = {'Quân Tượng Ảo Ảnh'}, 
+	shadow_rook = {'Quân Xe Ảo Ảnh'}, 
+	spat = {'Cừu Nhầy'},
+	spiderqueen = {'Nhện Chúa'}, 
+	stalker_atrium = {'Hài Cốt Tái Sinh (atrium)'},
+	stalker_forest = {'Hài Cốt Tái Sinh (forest)'},
+	stalker = {'Hài Cốt Tái Sinh (caves)'},
+	toadstool_dark = {'Cóc Nấm Đau Đớn'},
+	toadstool = {'Cóc Nấm'}, 
+	--Boss Myth Word-----------
+	blackbear = {"Hắc Phong Đại Vương"},
+	myth_goldfrog = {"Bảo Kiêm Thiềm"},
+	myth_nian = {"Niên Thú"},
+	myth_siving_boss = {"Tử Khuê Huyền Điểu"},
+	rhino3_blue = {"Tích Hàn Đại Vương"},
+	rhino3_yellow = {"Tích Trần Đại Vương"},
+	rhino3_red = {"Tích Thử Đại Vương"},
+	--The ReForged-----------
+	snortoise = {"Snortoise"},
+	crocommander = {"Crocommander"},
+	rhinocebro = {"Rhinocebro Snapback"},
+	rhinocebro2 = {"Rhinocebro Flatbrim"},
+	swineclops = {"Infernal Swineclops"},
+	---------------------------
+}
+
+
+local mob_death_list = {
+	alterguardian_phase1=1, 
+	alterguardian_phase2=1, 
+	alterguardian_phase3=1,
+	antlion=1, 
+	babybeefalo=1,
+	bearger=1, 
+	beefalo=1,
+	beequeen=1, 
+	claywarg=1,
+	chester=1,
+	crabking=1, 
+	deciduoustree=1, 
+	deerclops=1,
+	dragonfly=1, 
+	gingerbreadwarg=1,
+	glommer=1,
+	eyeofterror=1, 
+	hutch=1,
+	klaus=1, 
+	koalefant_summer=1, 
+	koalefant_winter=1,
+	krampus=1, 
+	leif=1, 
+	leif_sparse=1, 
+	lightninggoat=1,
+	lordfruitfly=1, 
+	malbatross=1, 
+	minotaur=1,
+	moose=1, 
+	shadow_knight=1, 
+	shadow_bishop=1, 
+	shadow_rook=1, 
+	spat=1,
+	spiderqueen=1, 
+	stalker_atrium=1, 
+	stalker_forest=1, 
+	stalker=1, 
+	toadstool_dark=1,
+	toadstool=1, 
+	twinofterror1=1, 
+	twinofterror2=1, 
+	walrus=1, 
+	warg=1,
+	--Boss Myth Word-----------
+	blackbear=1,
+	myth_goldfrog=1, 
+	myth_nian=1,
+	myth_siving_boss=1,
+	rhino3_blue=1, 
+	rhino3_yellow=1, 
+	rhino3_red=1,
+	--Boss Uncom----------------
+	hoodedwidow=1,
+	mock_dragonfly=1,
+	moonmaw_dragonfly=1,
+	mothergoose=1, 
+	snapdragon=1,
+	snapdragon_buddy=1,
+	--The ReForged-----------
+	-- pitpig=1,
+	-- snortoise=1,
+	-- crocommander=1,
+	-- crocommander_rapidfire=1,
+	-- scorpeon=1,
+	boarilla=1,
+	rhinocebro=1,
+	rhinocebro2=1,
+	boarrior=1,
+	swineclops=1,
+	--Hallowed Forge-----------
+	-- cursed_mummy=1,
+	-- pitpig_zombie=1,
+	-- pitpig_zombie_armored=1,
+	-- roach_beetle=1,
+	-- snortoise_ghost=1,
+	-- crocommander_necro=1,
+	-- scorpeon_cultist=1,
+	boarilla_skeleton=1,
+	rhinocebro_franken=1,
+	boarrior_skeleton=1,
+	cursed_helmet=1,
+	swineclops_mummy=1,
+	--Charry Forest-----------
+	cherry_daylily=1,
+	cherry_beequeen=1,
+	cherry_watcher=1,
+	----------------------------
+}
+local mob_spawn_list = {
+	beequeenhive=1,
+	dragonfly_spawner=1,
+	--Boss Myth Word-----------
+	myth_goldfrog_spawner=1,
+	--Boss Uncom----------------
+	--The ReForged-----------
+	--Hallowed Forge-----------
+	--Charry Forest-----------
+	----------------------------
+}
+
+function lang(prefab, num)
+	if not translation then return false end 
+	if language == "vi" then
+		if translation[prefab] then
+			return translation[prefab][1]
+		end
+	end	
+	return false
+end
+
+
+local function entityDeathLeft(inst, data)
+	if data.afflicter then
+		local afflicter = data.afflicter
+		if afflicter.prefab == "tornado" and afflicter.WINDSTAFF_CASTER ~= nil then afflicter = afflicter.WINDSTAFF_CASTER end
+		local name = lang(afflicter.prefab, 1) or afflicter.name
+		if GLOBAL.TheWorld:HasTag("forest") then
+			local count = -1
+			local name_murdered = lang(inst.prefab, 2) or inst.name
+			if inst:HasTag("beefalo") then
+				for k, v in pairs(GLOBAL.Ents) do
+					if v:HasTag("beefalo") then
+						count = count + 1
+					end
+				end
+				if count <= 5 then
+					GLOBAL.TheNet:Announce("󰀘 "..name.." "..KILLS.." "..name_murdered..", "..REMAIN..": "..count.." 󰀘", nil, nil, "item_drop")
+				end
+			elseif inst:HasTag("lightninggoat") then
+				for k, v in pairs(GLOBAL.Ents) do
+					if v:HasTag("lightninggoat") then
+						count = count + 1
+					end
+				end
+				if count <= 3 then
+					GLOBAL.TheNet:Announce("󰀘"..name.." "..KILLS.." "..name_murdered..", "..REMAIN..": "..count.." 󰀘", nil, nil, "item_drop")
+				end	
+			--end
+			--Uncom----------------
+			elseif inst:HasTag("snapdragon") then
+				for k, v in pairs(GLOBAL.Ents) do
+					if v:HasTag("snapdragon") then
+						count = count + 1
+					end
+				end
+				if count <= 3 then
+					GLOBAL.TheNet:Announce("󰀘"..name.." "..KILLS.." "..name_murdered..", "..REMAIN..": "..count.." 󰀘", nil, nil, "item_drop")
+				end	
+			elseif inst:HasTag("snapdragon_buddy") then
+				for k, v in pairs(GLOBAL.Ents) do
+					if v:HasTag("snapdragon_buddy") then
+						count = count + 1
+					end
+				end
+				if count <= 3 then
+					GLOBAL.TheNet:Announce("󰀘"..name.." "..KILLS.." "..name_murdered..", "..REMAIN..": "..count.." 󰀘", nil, nil, "item_drop")
+				end			
+			end
+			------------------------
+		end	
+	end	
+end
+
+local function entityDeath(inst, data)
+	if data.afflicter then
+		local afflicter = data.afflicter
+		local name_murdered = lang(inst.prefab, 2) or inst.name
+		if afflicter.prefab == "tornado" and afflicter.WINDSTAFF_CASTER ~= nil then afflicter = afflicter.WINDSTAFF_CASTER end
+		local name = lang(afflicter.prefab, 1) or afflicter.name
+		GLOBAL.TheNet:Announce("󰀘 "..name.." "..KILLS.." "..name_murdered.." 󰀘", nil, nil, "item_drop")
+	end	
+end
+
+if death_annonce then
+	for k, v in pairs(mob_death_list) do
+		AddPrefabPostInit(k, function(inst)
+			if not GLOBAL.TheWorld.ismastersim then
+				return
+			end
+			
+			if inst:HasTag("beefalo") or inst:HasTag("lightninggoat") or inst:HasTag("snapdragon") or inst:HasTag("snapdragon_buddy") then
+				inst:ListenForEvent("death", entityDeathLeft)
+			else
+				inst:ListenForEvent("death", entityDeath)
+			end
+		end)
+	end
+end
+
+---clean------------------------------------------------------------
+
+GLOBAL.c_cleanall = function(name)
+	for k,ent in pairs(GLOBAL.Ents) do 
+		if ent.prefab == name and ent.components.inventoryitem ~= nil and ent.components.inventoryitem.owner == nil then 
+			ent:Remove(); 
+		end 
+	end 
+end
+
+GLOBAL.clean_event = function()
+
+	---winter-----------------------------------------------------------
+	
+	for k,v in pairs(GLOBAL.Ents) do 
+		if (v and v.prefab and v.prefab:find("winter_food", 1, true)) and v.components.inventoryitem ~= nil and v.components.inventoryitem.owner == nil then 
+			v:Remove() 
+		end 
+	end
+	
+	for k,v in pairs(GLOBAL.Ents) do 
+		if (v and v.prefab and v.prefab:find("winter_ornament_plain", 1, true)) and v.components.inventoryitem ~= nil and v.components.inventoryitem.owner == nil then 
+			v:Remove() 
+		end 
+	end
+	
+	for k,v in pairs(GLOBAL.Ents) do 
+		if (v and v.prefab and v.prefab:find("winter_ornament_fancy", 1, true)) and v.components.inventoryitem ~= nil and v.components.inventoryitem.owner == nil then 
+			v:Remove() 
+		end 
+	end
+	
+	for k,v in pairs(GLOBAL.Ents) do 
+		if (v and v.prefab and v.prefab:find("winter_ornament_boss", 1, true)) and v.components.inventoryitem ~= nil and v.components.inventoryitem.owner == nil then 
+			v:Remove() 
+		end 
+	end
+	
+	for k,v in pairs(GLOBAL.Ents) do 
+		if (v and v.prefab and v.prefab:find("winter_ornament_festivalevents", 1, true)) and v.components.inventoryitem ~= nil and v.components.inventoryitem.owner == nil then 
+			v:Remove() 
+		end 
+	end
+	
+	for k,v in pairs(GLOBAL.Ents) do 
+		if (v and v.prefab and v.prefab:find("winter_ornament_light", 1, true)) and v.components.inventoryitem ~= nil and v.components.inventoryitem.owner == nil then 
+			v:Remove() 
+		end 
+	end
+	
+	---halloween-----------------------------------------------------------
+	
+	for k,v in pairs(GLOBAL.Ents) do 
+		if (v and v.prefab and v.prefab:find("halloweencandy", 1, true)) and v.components.inventoryitem ~= nil and v.components.inventoryitem.owner == nil then 
+			v:Remove() 
+		end 
+	end
+	
+	for k,v in pairs(GLOBAL.Ents) do 
+		if (v and v.prefab and v.prefab:find("halloween_ornament", 1, true)) and v.components.inventoryitem ~= nil and v.components.inventoryitem.owner == nil then 
+			v:Remove() 
+		end 
+	end
+	
+end

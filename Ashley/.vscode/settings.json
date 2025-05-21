@@ -1,0 +1,28 @@
+{
+    "Lua.diagnostics.globals": [
+        "AddPlayerPostInit",
+        "SendModRPCToServer",
+        "GetModRPC",
+        "AddModRPCHandler",
+        "GLOBAL",
+        "modimport",
+        "AddClassPostConstruct",
+        "AddPrefabPostInit",
+        "AddComponentPostInit",
+        "AddUserCommand",
+        "AddSimPostInit",
+        "AddGlobalClassPostConstruct",
+        "AddModCharacterSpeech",
+        "AddAction",
+        "AddComponentAction",
+        "AddStategraphActionHandler",
+        "AddStategraphPostInit",
+        "AddClientModRPCHandler",
+        "Asset",
+        "TEXT_FILTER_CTX_CHAT"
+    ],
+    "Lua.diagnostics.disable": [
+        "undefined-field",
+        "inject-field"
+    ]
+}

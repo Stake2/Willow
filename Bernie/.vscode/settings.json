@@ -1,0 +1,23 @@
+{
+    "Lua.diagnostics.globals": [
+        "GLOBAL",
+        "modimport",
+        "AddSimPostInit",
+        "AddPlayerPostInit",
+        "AddPrefabPostInit",
+        "TUNING",
+        "AddComponentPostInit",
+        "SendModRPCToShard",
+        "GetShardModRPC",
+        "AddShardModRPCHandler",
+        "AddModRPCHandler",
+        "SendModRPCToClient",
+        "AddStategraphPostInit",
+        "AddStategraphActionHandler"
+    ],
+    "Lua.diagnostics.disable": [
+        "inject-field",
+        "undefined-field",
+        "param-type-mismatch"
+    ]
+}

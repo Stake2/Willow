@@ -1,0 +1,435 @@
+----- Inits -----
+if not (GLOBAL.TheNet and GLOBAL.TheNet:GetIsServer()) then
+    return
+end
+
+----- Cooldowns -----
+local klaus_count = 0
+local shadow_rook_count = 0
+local shadow_knight_count = 0
+local shadow_bishop_count = 0
+
+----- Variables -----
+local serverUrl = "http://localhost:8080/dst"
+
+----- Tables -----
+local bosses = {{rabbitking_aggressive = 1}, {stalker_atrium = 8}, {alterguardian_phase3 = 8}, {toadstool = 4}, {toadstool_dark = 8}, {worm_boss = 4}, {spiderqueen = 1}, {shadow_knight = 1}, {shadow_bishop = 2}, {shadow_rook = 1}, {sharkboi = 2}, {twinofterror1 = 2}, {twinofterror2 = 2}, {eyeofterror = 2}, {dragonfly = 4}, {minotaur = 3}, {lordfruitfly = 2}, {malbatross = 2}, {beequeen = 4}, {daywalker = 2}, {daywalker2 = 2}, {crabking = 4}, {deerclops = 1}, {moose = 1}, {antlion = 6}, {bearger = 4}, {mutateddeerclops = 2}, {mutatedwarg = 2}, {mutatedbearger = 6}, {klaus = 8}}
+local fixBlacklist = {"pighouse", "rabbithouse", "monkeyhut", "monkeybarrel", "mermhouse_crafted", "mermhouse", "mermwatchtower"}
+
+----- Commands -----
+local function isBlacklisted(prefab)
+    for _, v in ipairs(fixBlacklist) do
+        if v == prefab then
+            return true
+        end
+    end
+    return false
+end
+
+local function FixCommand(player)
+    if not player then
+        return
+    end
+    if not player.sg then
+        return
+    end
+    local x, y, z = player.Transform:GetWorldPosition()
+    local radius = 6
+    player.sg:GoToState("domediumaction")
+    player:DoTaskInTime(.6, function()
+        if player then
+            player.sg:GoToState("idle")
+            local played_sound = false
+            for _, ent in ipairs(GLOBAL.TheSim:FindEntities(x, y, z, radius, {"burnt"}, {"INLIMBO"})) do
+                if ent then
+                    local orig_pos = ent:GetPosition()
+                    local prefab_name = ent.prefab
+                    local skin = ent.skinname
+                    if not isBlacklisted(prefab_name) then
+                        ent:Remove()
+                        local new_ent = GLOBAL.SpawnPrefab(prefab_name, skin, nil, player.userid)
+                        if new_ent then
+                            new_ent.Transform:SetPosition(orig_pos:Get())
+                            if not played_sound then
+                                new_ent.SoundEmitter:PlaySound("dontstarve/common/place_structure_straw")
+                                played_sound = true
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+----- Functions -----
+local PostMessage = function(jsonEncoded)
+    GLOBAL.TheSim:QueryServer(serverUrl, function(result, isSuccessful, resultCode)
+        if not (isSuccessful and resultCode == 200 and result) then
+            return
+        end
+    end, "POST", jsonEncoded)
+end
+
+local function GetActiveUsers()
+    local users = {}
+    for _, player in ipairs(GLOBAL.AllPlayers) do
+        users[player.userid] = {player.name or nil, player.prefab or nil}
+    end
+    return users
+end
+local function GetOnlineUsers()
+    local users = {}
+    local client_table = GLOBAL.TheNet:GetClientTable()
+    if not client_table then
+        return
+    end
+    for _, client in ipairs(client_table) do
+        users[client.userid] = {name = client.name or nil, prefab = client.prefab or nil, admin = client.admin or false, online = true}
+    end
+    return users
+end
+
+local function GetServerResponse()
+    local jsonEncoded = GLOBAL.json.encode({key = "update"})
+    GLOBAL.TheSim:QueryServer(serverUrl, function(result, isSuccessful, resultCode)
+        if not (isSuccessful and resultCode == 200 and result) then
+            -- later
+            return
+        end
+        local jsonContent = GLOBAL.json.decode(result)
+        if not (type(jsonContent) == "table") then
+            return
+        end
+        if jsonContent.key == "message" then
+            for i, message in ipairs(jsonContent.content) do
+                if message.type == "message" then
+                    print("Message received")
+                    GLOBAL.TheNet:Announce(string.format("[Discord] %s: %s", message.user or nil, message.message or nil), nil, nil, "mod")
+                end
+                if message.type == "announcement" then
+                    print("Announcement received")
+                    GLOBAL.TheNet:Announce(string.format("%s", message.message or nil), nil, nil)
+                end
+                if message.type == "player" then
+                    print("Player Controller received")
+                    for _, player in ipairs(GLOBAL.AllPlayers) do
+                        if player.userid == message.target then
+                            if message.message then
+                                if player.components.talker then
+                                    player.components.talker:Say(message.message, 3)
+                                end
+                            end
+                            if message.animation then
+                                if player.sg then
+                                    player:PushEvent("emote", {anim = message.animation})
+                                end
+                            end
+                            if message.soundeffect then
+                                if player.SoundEmitter then
+                                    player.SoundEmitter:PlaySound(message.soundeffect)
+                                end
+                            end
+                            return
+                        end
+                    end
+                end
+                if message.type == "command" then
+                    print("Command received")
+                    if message.message == "kick" then
+                        print("Kicking player")
+                        for _, player in ipairs(GLOBAL.AllPlayers) do
+                            if player.userid == message.target then
+                                GLOBAL.TheNet:Kick(player.userid)
+                                return
+                            end
+                        end
+                    end
+                    if message.message == "ban" then
+                        print("Banning player")
+                        for _, player in ipairs(GLOBAL.AllPlayers) do
+                            if player.userid == message.target then
+                                GLOBAL.TheNet:Ban(player.userid)
+                                return
+                            end
+                        end
+                    end
+                    if message.message == "terminal" then
+                        print("Executing console command")
+                        GLOBAL.ExecuteConsoleCommand(message.target)
+                    end
+                    if message.message == "give" then
+                        print("Executing give command")
+                        local userid = message.user
+                        local item = message.target
+                        for _, shard in pairs(GLOBAL.Shard_GetConnectedShards()) do
+                            GLOBAL.TheNet:SendRemoteExecute(string.format([[
+                                for _, p in ipairs(AllPlayers) do
+                                    if p.userid == "%s" then
+                                            p.components.inventory:GiveItem(SpawnPrefab("%s"))
+                                        break
+                                    end
+                                end
+                            ]], userid, item), shard)
+                        end
+                    end
+                    if message.message == "regen" then
+
+                        print("Regenerating world")
+                        GLOBAL.ExecuteConsoleCommand("c_regenerateworld()")
+                    end
+                    if message.message == "rollback" then
+
+                        GLOBAL.ExecuteConsoleCommand(string.format("c_rollback(%d)", message.target))
+                    end
+                end
+            end
+        end
+    end, "POST", jsonEncoded)
+end
+
+local function OnReceiveSkin(src, data)
+    if data and data.userid and data.item then
+        local jsonEncoded = GLOBAL.json.encode({key = "receiveskin", content = {userid = data.userid, item = data.item}})
+        PostMessage(jsonEncoded)
+    end
+end
+
+local function OnVoteKick(src, data)
+    if data and data.initiator and data.target then
+        local jsonEncoded = GLOBAL.json.encode({key = "votekick", content = {doer = data.initiator, target = data.target}})
+        PostMessage(jsonEncoded)
+    end
+end
+
+local function OnVoteRollback(src)
+    local jsonEncoded = GLOBAL.json.encode({key = "voterollback"})
+    PostMessage(jsonEncoded)
+end
+
+local function OnPlayerDeath(inst, data)
+    if inst then
+        local cause = data and data.cause or nil
+        local killer = data and data.afflicter or nil
+        local killer_name = nil
+        if killer and killer.GetDisplayName then
+            killer_name = killer:GetDisplayName()
+        elseif killer and killer.prefab then
+            killer_name = killer.prefab
+        end
+        local jsonEncoded = GLOBAL.json.encode({key = "death", content = {player = inst:GetDisplayName(), prefab = inst.prefab, cause = cause, killer = killer_name}})
+        PostMessage(jsonEncoded)
+    end
+end
+
+local function OnPlayerRevived(inst, data)
+    if inst then
+        print(inst)
+        print(data)
+        local reviver = data and data.source or nil
+        local reviver_name = nil
+        if reviver and reviver.GetDisplayName then
+            reviver_name = reviver:GetDisplayName()
+        elseif reviver and reviver.prefab then
+            reviver_name = reviver.prefab
+        end
+        local jsonEncoded = GLOBAL.json.encode({key = "revive", content = {player = inst:GetDisplayName(), prefab = inst.prefab, reviver = reviver_name}})
+        PostMessage(jsonEncoded)
+    end
+end
+
+local function OnEntityDeath(inst, data)
+    local inst = data.inst
+    local cause = data.cause and data.afflicter or nil
+    if not inst then
+        return
+    end
+    for _, boss in ipairs(bosses) do
+        for prefab, points in pairs(boss) do
+            if inst.prefab == prefab then
+                if (inst.prefab == "klaus") then
+                    klaus_count = klaus_count + 1
+                    if klaus_count == 1 then
+                        inst:DoTaskInTime(20 * 60, function()
+                            klaus_count = 0
+                        end)
+                        return
+                    end
+                    klaus_count = 0
+                end
+                if (inst.prefab == 'shadow_rook' or inst.prefab == 'shadow_knight' or inst.prefab == 'shadow_bishop') then
+                    if (inst.prefab == 'shadow_rook') then
+                        shadow_rook_count = shadow_rook_count + 1
+                        if shadow_rook_count > 1 then
+                            return
+                        end
+                        inst:DoTaskInTime(10 * 60, function()
+                            shadow_rook_count = 0
+                        end)
+                        shadow_rook_count = shadow_rook_count + 1
+                    end
+                    if (inst.prefab == 'shadow_knight') then
+                        shadow_knight_count = shadow_knight_count + 1
+                        if shadow_knight_count > 1 then
+                            return
+                        end
+                        inst:DoTaskInTime(10 * 60, function()
+                            shadow_knight_count = 0
+                        end)
+                        shadow_knight_count = shadow_knight_count + 1
+                    end
+                    if (inst.prefab == 'shadow_bishop') then
+                        shadow_bishop_count = shadow_bishop_count + 1
+                        if shadow_bishop_count > 1 then
+                            return
+                        end
+                        inst:DoTaskInTime(10 * 60, function()
+                            shadow_bishop_count = 0
+                        end)
+                        shadow_bishop_count = shadow_bishop_count + 1
+                    end
+                end
+                local victim = inst:GetDisplayName() or nil
+                local doer = cause and cause:GetDisplayName() or nil
+                if inst.prefab == "stalker_atrium" and doer == nil then
+                    return
+                end
+                local players = GetActiveUsers()
+                local jsonEncoded = GLOBAL.json.encode({key = "kill", content = {victim = victim, doer = doer, points = points, witness = players}})
+                PostMessage(jsonEncoded)
+                local texts = {"★ %s foi derrotado(a), todos resgataram %s oincs! ★", "★ Parece que derrotaram %s... Mais %s oincs para todos! ★", "★ %s se foi, %s oincs foram pilhados de seu corpo... ★"}
+                local random_text = texts[math.random(#texts)]
+                GLOBAL.TheNet:Announce(string.format(random_text, victim, points), nil, nil)
+                for _, player in ipairs(GLOBAL.AllPlayers) do
+                    if player.SoundEmitter then
+                        player.SoundEmitter:PlaySound("dontstarve/quagmire/HUD/new_recipe")
+                    end
+                    if player.sg and player.sg:HasStateTag("idle") then
+                        player:PushEvent("emote", {anim = "emote_jumpcheer"})
+                    end
+                end
+            end
+        end
+    end
+end
+
+----- Main -----
+AddSimPostInit(function()
+    if GLOBAL.TheWorld and GLOBAL.TheWorld:HasTag("cave") then
+        return
+    end
+    local NETWORKING_SAY = GLOBAL.Networking_Say
+    GLOBAL.Networking_Say = function(guid, userid, name, prefab, message, colour, whisper, isemote)
+        if not (GLOBAL.TheWorld.ismastersim) or not message then
+            return
+        end
+
+        local trimmed_message = message:match("^%s*(.-)%s*$")
+        local prefix = trimmed_message:sub(1, 1)
+        local command = trimmed_message:sub(2)
+
+        if prefix == "." then
+            local player = nil
+            for _, v in ipairs(GLOBAL.AllPlayers) do
+                if v.userid == userid then
+                    player = v
+                    break
+                end
+            end
+            if command == "fix" then
+                FixCommand(player)
+            end
+        end
+
+        local jsonEncoded = GLOBAL.json.encode({key = "message", content = {userid = userid, name = name, prefab = prefab, message = message, whisper = whisper}})
+        GLOBAL.TheSim:QueryServer(serverUrl, function(result, isSuccessful, resultCode)
+            if not (isSuccessful and resultCode == 200 and result) then
+                return
+            end
+        end, "POST", jsonEncoded)
+
+        return NETWORKING_SAY(guid, userid, name, prefab, message, colour, whisper, isemote)
+    end
+end)
+
+AddPrefabPostInit("world", function(inst)
+    inst:DoStaticPeriodicTask(1, function()
+        GetServerResponse()
+    end)
+    if inst:HasTag("cave") then
+        return
+    end
+    inst:ListenForEvent("entity_death", OnEntityDeath)
+    inst:ListenForEvent("ms_receiveskin", OnReceiveSkin)
+    inst:ListenForEvent("ms_startvotekick", OnVoteKick)
+    inst:ListenForEvent("ms_startvoterollback", OnVoteRollback)
+    inst:DoStaticPeriodicTask(3, CheckPlayerConnections)
+end)
+
+AddSimPostInit(function()
+    if GLOBAL.TheWorld and GLOBAL.TheWorld:HasTag("cave") then
+        return
+    end
+    AddPlayerPostInit(function(inst)
+        inst:ListenForEvent("death", OnPlayerDeath)
+        inst:ListenForEvent("ms_respawnedfromghost", OnPlayerRevived)
+        inst:ListenForEvent("respawnfromcorpse", OnPlayerRevived)
+    end)
+end)
+
+AddPrefabPostInit("daywalker", function(inst)
+    if not GLOBAL.TheWorld.ismastersim then
+        return
+    end
+    if GLOBAL.TheWorld and GLOBAL.TheWorld:HasTag("cave") then
+        return
+    end
+    inst:ListenForEvent("onremove", function()
+        OnEntityDeath(nil, {inst = inst})
+    end)
+end)
+
+AddPrefabPostInit("daywalker2", function(inst)
+    if not GLOBAL.TheWorld.ismastersim then
+        return
+    end
+    if GLOBAL.TheWorld and GLOBAL.TheWorld:HasTag("cave") then
+        return
+    end
+    inst:ListenForEvent("onremove", function()
+        OnEntityDeath(nil, {inst = inst})
+    end)
+end)
+
+local oldNetworking_Announcement = GLOBAL.Networking_Announcement
+GLOBAL.Networking_Announcement = function(message, colour, announce_type)
+    if GLOBAL.TheWorld and GLOBAL.TheWorld:HasTag("cave") then
+        return
+    end
+
+    local event_key = nil
+    local content = {message = message, type = announce_type, players = GetOnlineUsers()}
+
+    if announce_type == "join_game" then
+        event_key = "join_game"
+    elseif announce_type == "leave_game" then
+        event_key = "leave_game"
+    elseif announce_type == "kicked_from_game" then
+        event_key = "kicked"
+    elseif announce_type == "banned_from_game" then
+        event_key = "banned"
+    elseif announce_type == "item_drop" then
+        event_key = "item_drop"
+    elseif announce_type == "vote" then
+        event_key = "vote"
+    elseif announce_type == "dice_roll" then
+        event_key = "dice_roll"
+    end
+
+    if not event_key then
+        return
+    end
+
+    local jsonEncoded = GLOBAL.json.encode({key = event_key, content = content})
+    PostMessage(jsonEncoded)
+end

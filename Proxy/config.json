@@ -1,0 +1,6 @@
+{
+    "SERVERIP": "localhost",
+    "SERVERPORT": 24565,
+    "CLIENTPORT": 8090,
+    "SERVERID": "SERVERID"
+}

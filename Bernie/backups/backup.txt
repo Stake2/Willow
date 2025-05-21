@@ -1,0 +1,110 @@
+print('[Bernie] Attack-Cooldown-Module was loaded!')
+
+local GLOBAL = GLOBAL or _G
+local attackcooldown = 0.46
+local blacklist = {"slingshot", "boomerang", "blowdart_pipe", "blowdart_fire", "blowdart_sleep", "icestaff", "firestaff"}
+
+local attackcooldowns = {}
+local gracecooldowns = {}
+local seconds = 0
+
+local function OnPlayerAttack(inst, data)
+    local userid = inst.GUID and GLOBAL.tostring(inst.GUID)
+    local spotted = false
+    if not attackcooldowns[userid] then
+        attackcooldowns[userid] = 0
+    end
+    if not gracecooldowns[userid] then
+        gracecooldowns[userid] = 0
+    end
+end
+
+local function OnPlayerSpawn(inst)
+    local userid = inst.GUID and GLOBAL.tostring(inst.GUID)
+    local spotted = false
+    if not attackcooldowns[userid] then
+        attackcooldowns[userid] = 0
+    end
+    if not gracecooldowns[userid] then
+        gracecooldowns[userid] = 0
+    end
+    if inst.components.combat then
+        if not inst._originalCanAttack then
+            inst._originalCanAttack = inst.components.combat.CanAttack
+        end
+        inst.components.combat.CanAttack = function(self, target)
+            local currenttime = GLOBAL.GetTime()
+            if currenttime < attackcooldowns[userid] then
+                return false
+            end
+            if inst.components.locomotor and inst.components.locomotor:IsMoving() then
+                return false
+            end
+            return inst._originalCanAttack(self, target)
+        end
+        local old_DoAttack = inst.components.combat.DoAttack
+        inst.components.combat.DoAttack = function(self, target, ...)
+            local currenttime = GLOBAL.GetTime()
+            if currenttime < (attackcooldowns[userid] or 0) then
+                spotted = true
+                if gracecooldowns[userid] > 2 then
+                    if inst.components.talker then
+                        inst.components.talker:Say("...")
+                    end
+                    if inst.SoundEmitter then
+                        inst.SoundEmitter:PlaySound("dontstarve/HUD/click_negative", "error_sound")
+                    end
+                    return nil
+                end
+            end
+            local cooldownValue = attackcooldown
+            if inst.components.inventory then
+                local handItem = inst.components.inventory:GetEquippedItem(GLOBAL.EQUIPSLOTS.HANDS)
+                if handItem then
+                    for _, item in ipairs(blacklist) do
+                        if handItem.prefab == item then
+                            cooldownValue = -1
+                            break
+                        end
+                    end
+                    if handItem.prefab == "alarmingclock" then
+                        cooldownValue = cooldownValue * 1.15
+                    end
+                    if inst.components.rider and inst.components.rider:IsRiding() then
+                        cooldownValue = cooldownValue * 1.06
+                    end
+                    if inst:HasTag("weremoose") then
+                        cooldownValue = cooldownValue * 1.06
+                    end
+                end
+            end
+            if not (cooldownValue == -1) then
+                attackcooldowns[userid] = currenttime + cooldownValue
+                if spotted == true then
+                    gracecooldowns[userid] = gracecooldowns[userid] + 1
+                else
+                    gracecooldowns[userid] = 0
+                end
+            end
+            return old_DoAttack(self, target, ...)
+        end
+    end
+end
+
+local function Routine()
+    seconds = seconds + 1
+    if seconds % 360 == 0 then
+        attackcooldowns = {}
+        gracecooldowns = {}
+    end
+end
+
+AddSimPostInit(function()
+    AddPlayerPostInit(function(inst)
+        inst:ListenForEvent("onhitother", OnPlayerAttack)
+        OnPlayerSpawn(inst)
+    end)
+    AddPrefabPostInit("world", function(inst)
+        inst:DoPeriodicTask(1, Routine)
+    end)
+end)

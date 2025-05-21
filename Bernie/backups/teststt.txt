@@ -1,0 +1,68 @@
+
+AddPrefabPostInit("madscience_lab", function(inst)
+    inst:AddTag("wilson_only")
+    
+    if inst.components.useablemachine then
+        local old_StartUsing = inst.components.useablemachine.StartUsing
+        inst.components.useablemachine.StartUsing = function(self, user)
+            if user and user.prefab ~= "wilson" then
+                if user.components.talker then
+                    local responses = {
+                        woodie = "I bet this thing ain't made of wood...",
+                        wes = "...",
+                        maxwell = "A crude attempt at magic and science combined...",
+                        wathgrithr = "Nay! This is no place for a warrior!",
+                        winona = "Hmph. This ain't proper engineering!",
+                        warly = "Non, non! This is not for a chef!",
+                        wormwood = "Hmm... No plants? No good...",
+                        wanda = "Tch, no time for this!",
+                        walter = "Maybe Woby knows how it works?",
+                        wx78 = "ERROR: INSUFFICIENT DATA TO PROCESS!",
+                        wickerbottom = "Curious. This contraption eludes me...",
+                        willow = "Bah! Who needs science anyway?",
+                        wolfgang = "Wolfgang does not understand tiny machine...",
+                        wendy = "Perhaps this was not meant for me...",
+                        webber = "Maybe Wilson knows how this works?",
+                        wortox = "This machine is trickier than expected, hyuyu!",
+                        wurt = "Glurph! Not for me...",
+                        default = "I have no idea how this works..."
+                    }
+                    user.components.talker:Say(responses[user.prefab] or responses.default)
+                end
+                return
+            end
+            old_StartUsing(self, user)
+        end
+    end
+end)
+
+
+
+
+local oldNetworking_Announcement = GLOBAL.Networking_Announcement
+GLOBAL.Networking_Announcement = function(message, colour, announce_type)
+    if GLOBAL.TheWorld and not GLOBAL.TheWorld:HasTag("cave") then
+        local event_key = nil
+        local maxPlayers = GLOBAL.TheNet:GetDefaultMaxPlayers()
+        if announce_type == "join_game" then
+            event_key = "joingame"
+        elseif announce_type == "leave_game" then
+            event_key = "leavegame"
+        elseif (announce_type == "item_drop") then
+            event_key = "itemdrop"
+        elseif (announce_type == "dice_roll") then
+            event_key = "diceroll"
+        end
+        if event_key then
+            local content = {
+                message = message,
+                type = announce_type,
+                players = GetUsers(),
+                maxplayers = maxPlayers
+            }
+            local jsonEncoded = GLOBAL.json.encode({ key = event_key, value = content })
+            SendRequest(jsonEncoded)
+        end
+    end
+    return oldNetworking_Announcement(message, colour, announce_type)
+end

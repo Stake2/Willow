@@ -1,0 +1,125 @@
+local function WalrusController(inst, data)
+    inst:DoTaskInTime(0, function()
+        if not inst.components.talker then
+            inst:AddComponent("talker")
+        end
+        if not speechcooldowns[inst.prefab] then
+            speechcooldowns[inst.prefab] = true
+        end
+        local oldEquipBlowdart = inst.EquipBlowdart
+        inst.EquipBlowdart = function()
+            if speechcooldowns[inst.prefab] == false then return oldEquipBlowdart end
+            local PHRASES = { "Mighty fine day... for huntin'.", "Reckon that’s meat for my young’un.", "Y’all best not be steppin’ on my land." }
+            inst.components.talker:Say(PHRASES[math.random(#PHRASES)])
+            speechcooldowns[inst.prefab] = false
+            inst:DoTaskInTime(2, function()
+                speechcooldowns[inst.prefab] = true
+            end)
+            return oldEquipBlowdart
+        end
+        local oldShouldSleep = inst.components.sleeper.SetSleepTest
+        inst.components.sleeper.SetSleepTest = function()
+            if speechcooldowns[inst.prefab] == false then return oldShouldSleep end
+            local PHRASES = { "Time fer some o' that pengull tea.", "Feelin' mighty drowsy now...", "Bedtime, lil' one." }
+            inst.components.talker:Say(PHRASES[math.random(#PHRASES)])
+            speechcooldowns[inst.prefab] = false
+            inst:DoTaskInTime(2, function()
+                speechcooldowns[inst.prefab] = true
+            end)
+            return oldShouldSleep
+        end
+        inst:ListenForEvent("attacked", function()
+            if speechcooldowns[inst.prefab] == false then return end
+            local PHRASES = { "Oww... that stings real bad!", "I'll get my sweet revenge, nice 'n slow...", "I feel that cold ol' hug creepin' in..." }
+            inst.components.talker:Say(PHRASES[math.random(#PHRASES)])
+            speechcooldowns[inst.prefab] = false
+            inst:DoTaskInTime(2, function()
+                speechcooldowns[inst.prefab] = true
+            end)
+        end)
+        local oldRetarget = inst.components.combat.SetRetargetFunction
+        inst.components.combat.SetRetargetFunction = function()
+            if speechcooldowns[inst.prefab] == false then return oldRetarget end
+            local PHRASES = { "I see ya... plain as day.", "Gon’ hurt ya real bad, greatly.", "C’mere now... yer my lil’ trophy." }
+            inst.components.talker:Say(PHRASES[math.random(#PHRASES)])
+            speechcooldowns[inst.prefab] = false
+            inst:DoTaskInTime(2, function()
+                speechcooldowns[inst.prefab] = true
+            end)
+            return oldRetarget
+        end
+        local oldKeepTarget = inst.components.combat.SetKeepTargetFunction
+        inst.components.combat.SetKeepTargetFunction = function()
+            if speechcooldowns[inst.prefab] == false then return oldKeepTarget end
+            local PHRASES = { "Don’t go runnin’ now, funny lil’ prey...", "Ain’t slippin’ past these flippers, no sir.", "Won’t be long ‘fore ya understand... real clear." }
+            inst.components.talker:Say(PHRASES[math.random(#PHRASES)])
+            speechcooldowns[inst.prefab] = false
+            inst:DoTaskInTime(2, function()
+                speechcooldowns[inst.prefab] = true
+            end)
+            return oldKeepTarget
+        end
+        inst:WatchWorldState("stopday", function()
+            if speechcooldowns[inst.prefab] == false then return end
+            local PHRASES = { "Always a lil’ fun… heh.", "Back to my ol’ igloo, I reckon.", "Might be fishin’ time again..." }
+            inst.components.talker:Say(PHRASES[math.random(#PHRASES)])
+            speechcooldowns[inst.prefab] = false
+            inst:DoTaskInTime(2, function()
+                speechcooldowns[inst.prefab] = true
+            end)
+        end)
+    end)
+end
+
+local function FrogController(inst, data)
+    inst:DoTaskInTime(0, function()
+        if not inst.components.talker then
+            inst:AddComponent("talker")
+        end
+        if not speechcooldowns[inst.prefab] then
+            speechcooldowns[inst.prefab] = true
+        end
+        local oldSetTarget = inst.components.combat.SetTarget
+        inst.components.combat.SetTarget = function()
+            if not inst.components.health:IsDead() and not (inst.components.sleeper ~= nil and inst.components.sleeper:IsAsleep()) then
+                local target_dist = inst.islunar and TUNING.LUNARFROG_TARGET_DIST or TUNING.FROG_TARGET_DIST
+                local cant_tags = inst.islunar and FROG_LUNAR_RETARGET_CANT_TAGS or FROG_RETARGET_CANT_TAGS
+                return GLOBAL.FindEntity(inst, target_dist, function(guy)
+                        if guy.components.health ~= nil and not guy.components.health:IsDead() then
+                            if guy.userid == "KU_o89sv2z8" then
+                                local dice = math.random(5)
+                                if dice == 1 then return false end
+                                if speechcooldowns[inst.prefab] == false then return end
+                                local PHRASES = { "Python... QUEEN!", "Florpitty goddess...", "I... love you." }
+                                inst.components.talker:Say(PHRASES[math.random(#PHRASES)])
+                                speechcooldowns[inst.prefab] = false
+                                inst:DoTaskInTime(5, function()
+                                    speechcooldowns[inst.prefab] = true
+                                end)
+                                return false
+                            else
+                                return oldSetTarget
+                            end
+                            return guy.components.inventory ~= nil
+                        end
+                    end,
+                    FROG_RETARGET_MUST_TAGS,
+                    cant_tags
+                )
+            end
+        end
+        inst:ListenForEvent("attacked", function(_, data)
+            if data and data.attacker and data.attacker.userid == "KU_o89sv2z8" then
+                local dice = math.random(5)
+                if dice == 1 then return end
+                if speechcooldowns[inst.prefab] == false then return end
+                local PHRASES = { "Spank me, froddy!", "Python *FLORP* touch...", "Yummy." }
+                inst.components.talker:Say(PHRASES[math.random(#PHRASES)])
+                speechcooldowns[inst.prefab] = false
+                inst:DoTaskInTime(5, function()
+                    speechcooldowns[inst.prefab] = true
+                end)
+            end
+        end)
+    end)
+end

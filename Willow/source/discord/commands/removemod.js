@@ -11,7 +11,7 @@ module.exports = {
         if (!validateStaff(interaction)) return;
         const id = interaction.options.getString("id");
         const res = await databaseModsDeleteMod(id);
-        if (res) interaction.reply({ embeds: [buildEmbed({ color: 0x5B547E, description: `\`💣\` **·Mod \`${id}\` removido!**` })] }).catch((error) => { print(`[Error] Application error: ${error}`); });
+        if (res) interaction.reply({ embeds: [buildEmbed({ color: 0x5B547E, description: `\`💣\` **· Mod \`${id}\` removido!**` })] }).catch((error) => { print(`[Error] Application error: ${error}`); });
         else interaction.reply({ embeds: [buildEmbed({ color: 0x5B547E, description: `\`🐟\` **· Mod \`${id}\` não existe!**` })] }).catch((error) => { print(`[Error] Application error: ${error}`); });
     }
 }

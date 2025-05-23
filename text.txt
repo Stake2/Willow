@@ -1,0 +1,75 @@
+
+DECLARE
+    season_input VARCHAR(8);
+    rift_input BOOLEAN;
+    current_count INT;
+    used_bosses INT[];
+    new_boss_id INT;
+    removed_boss_id INT;
+BEGIN
+    -- Pega a esta‡ao e rift
+    SELECT season, rift INTO season_input, rift_input
+    FROM servers
+    WHERE id = server_id_input;
+
+    -- Encontra boss a ser removido
+    SELECT b.boss_id INTO removed_boss_id
+    FROM bounties b
+    JOIN bosses bo ON b.boss_id = bo.id
+    WHERE bo.prefab = prefab_input AND b.server_id = server_id_input
+    LIMIT 1;
+
+    IF removed_boss_id IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    -- Remove do bounty e incrementa mortes
+    DELETE FROM bounties
+    USING bosses
+    WHERE bounties.boss_id = bosses.id
+      AND bounties.server_id = server_id_input
+      AND bosses.prefab = prefab_input;
+
+    UPDATE bosses SET deaths = deaths + 1
+    WHERE id = removed_boss_id;
+
+    -- Conta quantos restam
+    SELECT COUNT(*) INTO current_count
+    FROM bounties WHERE server_id = server_id_input;
+
+    -- Lista de usados
+    SELECT ARRAY_AGG(boss_id) INTO used_bosses
+    FROM bounties WHERE server_id = server_id_input AND boss_id <> removed_boss_id;
+
+    IF used_bosses IS NULL THEN
+        used_bosses := ARRAY[removed_boss_id];
+    ELSE
+        used_bosses := used_bosses || removed_boss_id;
+    END IF;
+
+    -- Preenche at‚ 5
+    WHILE current_count < 5 LOOP
+        WITH ranked_bosses AS (
+            SELECT id
+            FROM bosses
+            WHERE (season = season_input OR season IS NULL)
+              AND (rift_input OR rift = FALSE)
+              AND id <> ALL(used_bosses)
+            ORDER BY deaths ASC, RANDOM()
+            LIMIT 1
+        )
+        SELECT id INTO new_boss_id FROM ranked_bosses;
+
+        IF new_boss_id IS NULL THEN
+            EXIT;
+        END IF;
+
+        INSERT INTO bounties (server_id, boss_id)
+        VALUES (server_id_input, new_boss_id, CURRENT_DATE);
+
+        used_bosses := used_bosses || new_boss_id;
+        current_count := current_count + 1;
+    END LOOP;
+
+    RETURN TRUE;
+END;

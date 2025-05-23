@@ -5,13 +5,14 @@ const { print } = require("../../utils/output");
 const { buildEmbed } = require("../embeds");
 
 module.exports = {
-    data: new SlashCommandBuilder().setName("addmod").setDescription("Adicione um mod no banco de dados.").addStringOption(option => option.setName("id").setDescription("ID do mod").setRequired(true)).addBooleanOption(option => option.setName("permitido").setDescription("É permitido? True ou False").setRequired(true)),
+    data: new SlashCommandBuilder().setName("addmod").setDescription("Adicione um mod no banco de dados.").addStringOption(option => option.setName("id").setDescription("ID do mod").setRequired(true)).addStringOption(option => option.setName("nome").setDescription("Nome do mod").setRequired(true)).addBooleanOption(option => option.setName("permitido").setDescription("É permitido? True ou False").setRequired(true)),
     run: async ({ interaction }) => {
         if (!validateServer(interaction)) return;
         if (!validateStaff(interaction)) return;
         const id = interaction.options.getString("id");
+        const name = interaction.options.getString("nome");
         const allowed = interaction.options.getBoolean("permitido");
-        const res = await databaseModsCreateMod(id, allowed);
+        const res = await databaseModsCreateMod(id, name, allowed);
         if (res) interaction.reply({ embeds: [buildEmbed({ color: 0x5B547E, description: `\`🗃\` · **Mod \`${id}\` adicionado!**` })] }).catch((error) => { print(`[Error] Application error: ${error}`); });
         else interaction.reply({ embeds: [buildEmbed({ color: 0x5B547E, description: `\`🗄\` · **Mod \`${id}\` duplicado!**` })] }).catch((error) => { print(`[Error] Application error: ${error}`); });
     }

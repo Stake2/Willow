@@ -6,7 +6,7 @@ local attackcooldown = 0.460
 local attackcooldowns = {}
 local gracecooldowns = {}
 
-local blacklist = { spear_wathgrithr_lightning_charged = true, staff_lunarplant = true, voidcloth_boomerang = true, boomerang = true, blowdart_pipe = true, blowdart_fire = true, blowdart_sleep = true, icestaff = true, firestaff = true }
+local blacklist = {slingshot_claire = true, slingshot_jessie = true, slingshot_matilda = true, slingshot_gnasher = true, magnerang = true, spear_wathgrithr_lightning_charged = true, staff_lunarplant = true, voidcloth_boomerang = true, boomerang = true, blowdart_pipe = true, blowdart_fire = true, blowdart_sleep = true, icestaff = true, firestaff = true }
 local attackblacklist = { willow_shadow_flame = true, flamethrower_fx = true }
 
 local function starts_with(str, prefix)

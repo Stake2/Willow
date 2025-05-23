@@ -16,7 +16,7 @@ module.exports = {
         const formatRank = (list, type, lineLength = 25) => {
             return list.map((user, index) => {
                 const medal = medals[index] ?? "👤";
-                const value = String(user[type] ?? 0);
+                const value = (Number(user[type]) ?? 0).toFixed(1);
                 const name_max_len = lineLength - medal.length - value.length - 2;
                 let name = user.name ?? "Alguém";
                 if (name.length > name_max_len) name = name.slice(0, name_max_len);

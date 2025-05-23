@@ -29,7 +29,7 @@ module.exports = (body, res) => {
         channel.send({ embeds: [{ color: 0x8C8C8C, title: title, description: desc, thumbnail: { url: "https://media.discordapp.net/attachments/1270552171041263658/1343494255632580628/image.png?ex=67bd7a07&is=67bc2887&hm=b2d9146a8000778e700214957e225db667886bf11142c1d5b5e4c918b1d512b5&=&format=webp&quality=lossless" } }] }).catch((error) => { print(`[Error] Application error: ${error}`); });
         const player = await databaseUsersGetUser({ userid: body.value.userid });
         if (!player) return;
-        const luck = rollDice(1, 5);
+        const luck = rollDice(1, 10);
         let quantity = player.experience * (0.01 * luck);
         if (quantity == 0) return;
         databaseUsersGivePoints(body.value, -quantity, serverId);

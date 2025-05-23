@@ -1,13 +1,13 @@
-const { databaseQuery } = require("../postgre");
+const { databaseQuery } = require('../postgre');
 
 async function databaseServersGetServers() {
-    const res = await databaseQuery("SELECT * FROM servers");
-    return res.rows;
+  const res = await databaseQuery('SELECT * FROM servers');
+  return res.rows;
 }
 
-async function databaseServersUpdateServer(serverId, season, remaining, rift) {
-    const res = await databaseQuery("UPDATE servers SET season = $1, season_length = $2, updated_at = CURRENT_DATE, rift = $4 WHERE identity = $3", [season, remaining, serverId, rift || false]);
-    return res.rowCount > 0;
+async function databaseServersUpdateServer(serverId, season, rift) {
+  const res = await databaseQuery('UPDATE servers SET season = $1, rift = $2 WHERE identity = $3', [season, rift || false, serverId]);
+  return res.rowCount > 0;
 }
 
-module.exports = { databaseServersGetServers, databaseServersUpdateServer }
+module.exports = { databaseServersGetServers, databaseServersUpdateServer };

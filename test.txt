@@ -1,0 +1,5 @@
+Explicação dos módulos:
+Ashley: Mod Client-side
+Bernie: Mod Server-side
+Proxy: Proxy-Bernie-Willow
+Willow: Bot Discord
